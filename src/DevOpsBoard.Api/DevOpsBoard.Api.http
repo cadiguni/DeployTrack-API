@@ -1,0 +1,64 @@
+@DevOpsBoard.Api_HostAddress = http://localhost:5020
+@Token = paste-token-here
+
+POST {{DevOpsBoard.Api_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Admin",
+  "email": "admin@devopsboard.local",
+  "password": "ChangeMe123",
+  "role": "Admin"
+}
+
+###
+
+POST {{DevOpsBoard.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@devopsboard.local",
+  "password": "ChangeMe123"
+}
+
+###
+
+GET {{DevOpsBoard.Api_HostAddress}}/api/environments
+Authorization: Bearer {{Token}}
+Accept: application/json
+
+###
+
+POST {{DevOpsBoard.Api_HostAddress}}/api/applications
+Authorization: Bearer {{Token}}
+Content-Type: application/json
+
+{
+  "name": "billing-api",
+  "description": "Billing service API",
+  "repositoryUrl": "https://github.com/user/billing-api"
+}
+
+###
+
+POST {{DevOpsBoard.Api_HostAddress}}/api/deployments
+Authorization: Bearer {{Token}}
+Content-Type: application/json
+
+{
+  "applicationName": "billing-api",
+  "environment": "production",
+  "version": "1.4.2",
+  "status": "Success",
+  "deployedBy": "github-actions",
+  "commitSha": "a1b2c3d",
+  "pipelineUrl": "https://github.com/user/repo/actions/runs/123",
+  "startedAt": "2026-05-18T20:10:00Z",
+  "finishedAt": "2026-05-18T20:14:00Z"
+}
+
+###
+
+GET {{DevOpsBoard.Api_HostAddress}}/api/deployments/latest?applicationName=billing-api&environment=production
+Authorization: Bearer {{Token}}
+Accept: application/json

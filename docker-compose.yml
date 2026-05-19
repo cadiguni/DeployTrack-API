@@ -1,0 +1,35 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=devopsboard;Username=devopsboard;Password=devopsboard
+      Jwt__Issuer: DevOpsBoard
+      Jwt__Audience: DevOpsBoard
+      Jwt__SigningKey: local-development-signing-key-change-me-32chars
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: devopsboard
+      POSTGRES_USER: devopsboard
+      POSTGRES_PASSWORD: devopsboard
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devopsboard -d devopsboard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:

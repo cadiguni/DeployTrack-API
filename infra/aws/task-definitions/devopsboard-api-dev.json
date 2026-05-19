@@ -1,0 +1,49 @@
+{
+  "family": "devopsboard-api-dev",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::<account-id>:role/devopsboard-ecs-task-execution-role",
+  "taskRoleArn": "arn:aws:iam::<account-id>:role/devopsboard-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "devopsboard-api",
+      "image": "placeholder",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "ASPNETCORE_ENVIRONMENT",
+          "value": "Production"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "ConnectionStrings__DefaultConnection",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:<account-id>:secret:devopsboard/dev/database-url"
+        },
+        {
+          "name": "Jwt__SigningKey",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:<account-id>:secret:devopsboard/dev/jwt-signing-key"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/devopsboard-api-dev",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "api"
+        }
+      }
+    }
+  ]
+}
