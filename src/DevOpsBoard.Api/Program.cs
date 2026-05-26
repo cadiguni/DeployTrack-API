@@ -44,7 +44,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "DevOpsBoard API",
+        Title = "DeployTrack API",
         Version = "v1",
         Description = "API for applications, environments, deployments and health checks."
     });

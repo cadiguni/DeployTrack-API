@@ -7,9 +7,9 @@ services:
       - "8080:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=devopsboard;Username=devopsboard;Password=devopsboard
-      Jwt__Issuer: DevOpsBoard
-      Jwt__Audience: DevOpsBoard
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=deploytrack;Username=deploytrack;Password=deploytrack
+      Jwt__Issuer: DeployTrack
+      Jwt__Audience: DeployTrack
       Jwt__SigningKey: local-development-signing-key-change-me-32chars
     depends_on:
       postgres:
@@ -18,15 +18,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: devopsboard
-      POSTGRES_USER: devopsboard
-      POSTGRES_PASSWORD: devopsboard
+      POSTGRES_DB: deploytrack
+      POSTGRES_USER: deploytrack
+      POSTGRES_PASSWORD: deploytrack
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U devopsboard -d devopsboard"]
+      test: ["CMD-SHELL", "pg_isready -U deploytrack -d deploytrack"]
       interval: 5s
       timeout: 5s
       retries: 10

@@ -1,54 +1,54 @@
-@DevOpsBoard.Api_HostAddress = http://localhost:5020
+@DeployTrack.Api_HostAddress = http://localhost:5020
 @Token = paste-token-here
 
-POST {{DevOpsBoard.Api_HostAddress}}/api/auth/register
+POST {{DeployTrack.Api_HostAddress}}/api/auth/register
 Content-Type: application/json
 
 {
   "name": "Admin",
-  "email": "admin@devopsboard.local",
+  "email": "admin@deploytrack.local",
   "password": "ChangeMe123",
   "role": "Admin"
 }
 
 ###
 
-POST {{DevOpsBoard.Api_HostAddress}}/api/auth/login
+POST {{DeployTrack.Api_HostAddress}}/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@devopsboard.local",
+  "email": "admin@deploytrack.local",
   "password": "ChangeMe123"
 }
 
 ###
 
-GET {{DevOpsBoard.Api_HostAddress}}/api/environments
+GET {{DeployTrack.Api_HostAddress}}/api/environments
 Authorization: Bearer {{Token}}
 Accept: application/json
 
 ###
 
-POST {{DevOpsBoard.Api_HostAddress}}/api/applications
+POST {{DeployTrack.Api_HostAddress}}/api/applications
 Authorization: Bearer {{Token}}
 Content-Type: application/json
 
 {
-  "name": "billing-api",
-  "description": "Billing service API",
-  "repositoryUrl": "https://github.com/user/billing-api"
+  "name": "orders-api",
+  "description": "Sample Orders API",
+  "repositoryUrl": "https://github.com/user/orders-api"
 }
 
 ###
 
-POST {{DevOpsBoard.Api_HostAddress}}/api/deployments
+POST {{DeployTrack.Api_HostAddress}}/api/deployments
 Authorization: Bearer {{Token}}
 Content-Type: application/json
 
 {
-  "applicationName": "billing-api",
+  "applicationName": "orders-api",
   "environment": "production",
-  "version": "1.4.2",
+  "version": "1.0.0",
   "status": "Success",
   "deployedBy": "github-actions",
   "commitSha": "a1b2c3d",
@@ -59,6 +59,6 @@ Content-Type: application/json
 
 ###
 
-GET {{DevOpsBoard.Api_HostAddress}}/api/deployments/latest?applicationName=billing-api&environment=production
+GET {{DeployTrack.Api_HostAddress}}/api/deployments/latest?applicationName=orders-api&environment=production
 Authorization: Bearer {{Token}}
 Accept: application/json

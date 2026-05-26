@@ -13,6 +13,17 @@ public sealed record CreateDeploymentRequest(
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt);
 
+public sealed record UpdateDeploymentRequest(
+    string ApplicationName,
+    string Environment,
+    string Version,
+    DeploymentStatus Status,
+    string DeployedBy,
+    string CommitSha,
+    string? PipelineUrl,
+    DateTimeOffset StartedAt,
+    DateTimeOffset? FinishedAt);
+
 public sealed record DeploymentResponse(
     Guid Id,
     string ApplicationName,

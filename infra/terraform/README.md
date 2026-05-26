@@ -1,6 +1,6 @@
 # Terraform
 
-Estrutura reservada para provisionar a infraestrutura AWS da DevOpsBoard API.
+Estrutura reservada para provisionar a infraestrutura AWS da DeployTrack API.
 
 ## Alvo inicial
 
@@ -18,14 +18,14 @@ Estrutura reservada para provisionar a infraestrutura AWS da DevOpsBoard API.
 
 ```text
 infra/terraform/
-├─ environments/
-│  ├─ dev/
-│  └─ prod/
-└─ modules/
-   ├─ networking/
-   ├─ ecr/
-   ├─ ecs/
-   ├─ rds/
-   ├─ alb/
-   └─ iam-github-oidc/
+|-- environments/
+|   |-- dev/
+|   `-- prod/
+`-- modules/
+    |-- networking/
+    |-- ecr/
+    |-- ecs/
+    |-- rds/
+    |-- alb/
+    `-- iam-github-oidc/
 ```

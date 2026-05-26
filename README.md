@@ -1,6 +1,6 @@
-# DevOpsBoard API
+# DeployTrack API
 
-API desenvolvida para registrar e consultar deploys de aplicacoes em multiplos ambientes, com autenticacao JWT, PostgreSQL, Docker, deploy automatizado em AWS ECS Fargate, infraestrutura com Terraform, logs no CloudWatch e secrets no AWS Secrets Manager.
+API para registrar e consultar deploys de aplicacoes em multiplos ambientes. Esta primeira etapa do portfolio entrega a API local com ASP.NET Core, Entity Framework Core, PostgreSQL via Docker, Swagger, autenticacao JWT e CRUDs principais.
 
 ## Stack
 
@@ -9,39 +9,41 @@ API desenvolvida para registrar e consultar deploys de aplicacoes em multiplos a
 - Entity Framework Core
 - PostgreSQL
 - JWT Bearer Authentication
+- Swagger
 - Docker e Docker Compose
-- GitHub Actions
-- AWS ECR, ECS Fargate, RDS, Secrets Manager e CloudWatch
-- Terraform
 
 ## Estrutura
 
 ```text
-DevOpsBoard-API/
-├─ src/
-│  └─ DevOpsBoard.Api/
-├─ infra/
-│  ├─ aws/
-│  │  └─ task-definitions/
-│  └─ terraform/
-├─ pipelines/
-│  └─ github-actions/
-├─ .github/
-│  └─ workflows/
-├─ Dockerfile
-├─ docker-compose.yml
-└─ DevOpsBoard.sln
+DeployTrack-API/
+|-- src/
+|   `-- DevOpsBoard.Api/
+|-- infra/
+|   |-- aws/
+|   |   `-- task-definitions/
+|   `-- terraform/
+|-- pipelines/
+|   `-- github-actions/
+|-- .github/
+|   `-- workflows/
+|-- Dockerfile
+|-- docker-compose.yml
+`-- DevOpsBoard.sln
 ```
 
-Os workflows executaveis ficam em `.github/workflows`, que e o caminho reconhecido automaticamente pelo GitHub Actions. A pasta `pipelines/` documenta os fluxos e decisoes de CI/CD.
+Observacao: o projeto .NET ainda usa o nome interno `DevOpsBoard.Api`, mas a API exposta e a configuracao local ja estao alinhadas ao produto `DeployTrack`.
 
 ## Modulos do MVP
 
-- Auth: criar usuario, login, JWT e roles `Admin`, `DevOps`, `Viewer`
-- Applications: cadastrar, listar, editar e remover aplicacoes
+- Auth: registro, login, JWT e roles `Admin`, `DevOps`, `Viewer`
+- Applications: cadastrar, listar, consultar, editar e remover aplicacoes
 - Environments: ambientes seedados `dev`, `staging`, `production`
-- Deployments: registrar deploy, consultar ultimo deploy e historico por aplicacao/ambiente
+- Deployments: cadastrar, listar, consultar, editar, remover, consultar ultimo deploy e historico por aplicacao/ambiente
 - Health Checks: registrar status e consultar status atual
+
+## Documentacao do codigo
+
+- [Guia do codigo](docs/CODE_WALKTHROUGH.md): explica arquitetura, pastas, fluxo das requisicoes, autenticacao, banco, controllers e endpoints.
 
 ## Como rodar com Docker
 
@@ -63,7 +65,7 @@ http://localhost:8080/swagger
 
 ## Como rodar localmente
 
-Suba um PostgreSQL local ou use apenas o banco do compose:
+Suba apenas o PostgreSQL pelo compose:
 
 ```bash
 docker compose up postgres
@@ -77,32 +79,6 @@ dotnet run --project src/DevOpsBoard.Api
 
 A connection string padrao esta em `src/DevOpsBoard.Api/appsettings.Development.json`.
 
-## CI/CD
-
-Este projeto usa GitHub Actions:
-
-- `.github/workflows/ci.yml`: restore, build e test da solution.
-- `.github/workflows/deploy-dev.yml`: build da imagem Docker, push para Amazon ECR e update do servico no ECS Fargate.
-
-O deploy usa OpenID Connect entre GitHub Actions e AWS IAM. Assim o repositorio nao precisa armazenar `AWS_ACCESS_KEY_ID` nem `AWS_SECRET_ACCESS_KEY`.
-
-Configure um environment chamado `dev` no GitHub e adicione o secret:
-
-```text
-AWS_ROLE_TO_ASSUME=arn:aws:iam::<account-id>:role/<github-actions-deploy-role>
-```
-
-Antes do primeiro deploy, ajuste em `.github/workflows/deploy-dev.yml`:
-
-- `AWS_REGION`
-- `ECR_REPOSITORY`
-- `ECS_CLUSTER`
-- `ECS_SERVICE`
-- `ECS_TASK_DEFINITION`
-- `CONTAINER_NAME`
-
-Tambem ajuste os ARNs placeholder em `infra/aws/task-definitions/devopsboard-api-dev.json`.
-
 ## Fluxo rapido
 
 1. Crie um usuario:
@@ -113,7 +89,7 @@ Content-Type: application/json
 
 {
   "name": "Admin",
-  "email": "admin@devopsboard.local",
+  "email": "admin@deploytrack.local",
   "password": "ChangeMe123",
   "role": "Admin"
 }
@@ -132,9 +108,9 @@ POST /api/applications
 Content-Type: application/json
 
 {
-  "name": "billing-api",
-  "description": "Billing service API",
-  "repositoryUrl": "https://github.com/user/billing-api"
+  "name": "orders-api",
+  "description": "Sample Orders API",
+  "repositoryUrl": "https://github.com/user/orders-api"
 }
 ```
 
@@ -145,9 +121,9 @@ POST /api/deployments
 Content-Type: application/json
 
 {
-  "applicationName": "billing-api",
+  "applicationName": "orders-api",
   "environment": "production",
-  "version": "1.4.2",
+  "version": "1.0.0",
   "status": "Success",
   "deployedBy": "github-actions",
   "commitSha": "a1b2c3d",
@@ -162,16 +138,20 @@ Content-Type: application/json
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `GET /api/applications`
+- `GET /api/applications/{id}`
 - `POST /api/applications`
 - `PUT /api/applications/{id}`
 - `DELETE /api/applications/{id}`
 - `GET /api/environments`
+- `GET /api/deployments`
+- `GET /api/deployments/{id}`
 - `POST /api/deployments`
-- `GET /api/deployments/latest?applicationName=billing-api&environment=production`
-- `GET /api/deployments/history?applicationName=billing-api`
-- `GET /api/deployments/history?environment=production`
+- `PUT /api/deployments/{id}`
+- `DELETE /api/deployments/{id}`
+- `GET /api/deployments/latest?applicationName=orders-api&environment=production`
+- `GET /api/deployments/history?applicationName=orders-api`
 - `POST /api/health-checks`
-- `GET /api/health-checks/current?applicationName=billing-api&environment=production`
+- `GET /api/health-checks/current?applicationName=orders-api&environment=production`
 
 ## Observacoes
 

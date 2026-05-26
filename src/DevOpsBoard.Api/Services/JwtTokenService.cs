@@ -16,8 +16,8 @@ public sealed class JwtTokenService(IConfiguration configuration) : IJwtTokenSer
     public (string Token, DateTimeOffset ExpiresAt) CreateToken(User user)
     {
         var jwtSection = configuration.GetSection("Jwt");
-        var issuer = jwtSection["Issuer"] ?? "DevOpsBoard";
-        var audience = jwtSection["Audience"] ?? "DevOpsBoard";
+        var issuer = jwtSection["Issuer"] ?? "DeployTrack";
+        var audience = jwtSection["Audience"] ?? "DeployTrack";
         var signingKey = jwtSection["SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey is required.");
         var expiresAt = DateTimeOffset.UtcNow.AddHours(8);
 

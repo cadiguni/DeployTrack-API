@@ -13,15 +13,27 @@ namespace DevOpsBoard.Api.Controllers;
 [Route("api/deployments")]
 public sealed class DeploymentsController(DevOpsBoardDbContext dbContext) : ControllerBase
 {
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<DeploymentResponse>>> GetAll(
+        [FromQuery] string? applicationName,
+        [FromQuery] string? environment,
+        CancellationToken cancellationToken)
+    {
+        var deployments = await BuildFilteredQuery(applicationName, environment)
+            .OrderByDescending(deployment => deployment.StartedAt)
+            .Select(deployment => ToResponse(deployment))
+            .ToListAsync(cancellationToken);
+
+        return Ok(deployments);
+    }
+
     [Authorize(Roles = "Admin,DevOps")]
     [HttpPost]
     public async Task<ActionResult<DeploymentResponse>> Create(CreateDeploymentRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.ApplicationName) ||
-            string.IsNullOrWhiteSpace(request.Environment) ||
-            string.IsNullOrWhiteSpace(request.Version))
+        if (!IsValid(request.ApplicationName, request.Environment, request.Version, request.DeployedBy, request.CommitSha))
         {
-            return BadRequest("ApplicationName, environment and version are required.");
+            return BadRequest("ApplicationName, environment, version, deployedBy and commitSha are required.");
         }
 
         var application = await FindApplication(request.ApplicationName, cancellationToken);
@@ -57,6 +69,76 @@ public sealed class DeploymentsController(DevOpsBoardDbContext dbContext) : Cont
         deployment.Environment = environment;
 
         return CreatedAtAction(nameof(GetById), new { id = deployment.Id }, ToResponse(deployment));
+    }
+
+    [Authorize(Roles = "Admin,DevOps")]
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<DeploymentResponse>> Update(
+        Guid id,
+        UpdateDeploymentRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!IsValid(request.ApplicationName, request.Environment, request.Version, request.DeployedBy, request.CommitSha))
+        {
+            return BadRequest("ApplicationName, environment, version, deployedBy and commitSha are required.");
+        }
+
+        var deployment = await dbContext.Deployments
+            .Include(deployment => deployment.Application)
+            .Include(deployment => deployment.Environment)
+            .SingleOrDefaultAsync(deployment => deployment.Id == id, cancellationToken);
+
+        if (deployment is null)
+        {
+            return NotFound();
+        }
+
+        var application = await FindApplication(request.ApplicationName, cancellationToken);
+        var environment = await FindEnvironment(request.Environment, cancellationToken);
+
+        if (application is null)
+        {
+            return NotFound("Application was not found.");
+        }
+
+        if (environment is null)
+        {
+            return NotFound("Environment was not found.");
+        }
+
+        deployment.ApplicationId = application.Id;
+        deployment.EnvironmentId = environment.Id;
+        deployment.Version = request.Version.Trim();
+        deployment.Status = request.Status;
+        deployment.DeployedBy = request.DeployedBy.Trim();
+        deployment.CommitSha = request.CommitSha.Trim();
+        deployment.PipelineUrl = request.PipelineUrl?.Trim();
+        deployment.StartedAt = request.StartedAt;
+        deployment.FinishedAt = request.FinishedAt;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        deployment.Application = application;
+        deployment.Environment = environment;
+
+        return Ok(ToResponse(deployment));
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var deployment = await dbContext.Deployments.SingleOrDefaultAsync(deployment => deployment.Id == id, cancellationToken);
+
+        if (deployment is null)
+        {
+            return NotFound();
+        }
+
+        dbContext.Deployments.Remove(deployment);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
     }
 
     [HttpGet("{id:guid}")]
@@ -104,6 +186,19 @@ public sealed class DeploymentsController(DevOpsBoardDbContext dbContext) : Cont
         [FromQuery] string? environment,
         CancellationToken cancellationToken)
     {
+        var deployments = await BuildFilteredQuery(applicationName, environment)
+            .OrderByDescending(deployment => deployment.StartedAt)
+            .Select(deployment => ToResponse(deployment))
+            .ToListAsync(cancellationToken);
+
+        return Ok(deployments);
+    }
+
+    private IQueryable<Deployment> DeploymentQuery() =>
+        dbContext.Deployments.AsNoTracking().Include(deployment => deployment.Application).Include(deployment => deployment.Environment);
+
+    private IQueryable<Deployment> BuildFilteredQuery(string? applicationName, string? environment)
+    {
         var query = DeploymentQuery();
 
         if (!string.IsNullOrWhiteSpace(applicationName))
@@ -118,16 +213,8 @@ public sealed class DeploymentsController(DevOpsBoardDbContext dbContext) : Cont
             query = query.Where(deployment => deployment.Environment.Name == normalizedEnvironment);
         }
 
-        var deployments = await query
-            .OrderByDescending(deployment => deployment.StartedAt)
-            .Select(deployment => ToResponse(deployment))
-            .ToListAsync(cancellationToken);
-
-        return Ok(deployments);
+        return query;
     }
-
-    private IQueryable<Deployment> DeploymentQuery() =>
-        dbContext.Deployments.AsNoTracking().Include(deployment => deployment.Application).Include(deployment => deployment.Environment);
 
     private async Task<Application?> FindApplication(string name, CancellationToken cancellationToken)
     {
@@ -140,6 +227,13 @@ public sealed class DeploymentsController(DevOpsBoardDbContext dbContext) : Cont
         var normalizedName = name.Trim().ToLowerInvariant();
         return await dbContext.Environments.SingleOrDefaultAsync(environment => environment.Name == normalizedName, cancellationToken);
     }
+
+    private static bool IsValid(string applicationName, string environment, string version, string deployedBy, string commitSha) =>
+        !string.IsNullOrWhiteSpace(applicationName) &&
+        !string.IsNullOrWhiteSpace(environment) &&
+        !string.IsNullOrWhiteSpace(version) &&
+        !string.IsNullOrWhiteSpace(deployedBy) &&
+        !string.IsNullOrWhiteSpace(commitSha);
 
     private static DeploymentResponse ToResponse(Deployment deployment) =>
         new(
