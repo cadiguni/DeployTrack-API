@@ -1,0 +1,44 @@
+@SampleOrders.Api_HostAddress = http://localhost:5030
+
+GET {{SampleOrders.Api_HostAddress}}/health
+Accept: application/json
+
+###
+
+POST {{SampleOrders.Api_HostAddress}}/orders
+Content-Type: application/json
+
+{
+  "customerName": "Maria Silva",
+  "items": [
+    {
+      "productName": "Keyboard",
+      "quantity": 1,
+      "unitPrice": 250.00
+    },
+    {
+      "productName": "Mouse",
+      "quantity": 2,
+      "unitPrice": 90.00
+    }
+  ]
+}
+
+###
+
+GET {{SampleOrders.Api_HostAddress}}/orders
+Accept: application/json
+
+###
+
+GET {{SampleOrders.Api_HostAddress}}/orders/{{orderId}}
+Accept: application/json
+
+###
+
+PATCH {{SampleOrders.Api_HostAddress}}/orders/{{orderId}}/status
+Content-Type: application/json
+
+{
+  "status": "Paid"
+}

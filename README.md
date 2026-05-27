@@ -1,6 +1,11 @@
 # DeployTrack API
 
-API para registrar e consultar deploys de aplicacoes em multiplos ambientes. Esta primeira etapa do portfolio entrega a API local com ASP.NET Core, Entity Framework Core, PostgreSQL via Docker, Swagger, autenticacao JWT e CRUDs principais.
+Projeto de portfolio com duas aplicacoes:
+
+- `DeployTrack API`: registra e consulta deploys de aplicacoes em multiplos ambientes.
+- `Sample Orders API`: aplicacao exemplo que controla pedidos ficticios e sera usada para simular deploys rastreados pela DeployTrack.
+
+A primeira etapa entrega a DeployTrack local com ASP.NET Core, Entity Framework Core, PostgreSQL via Docker, Swagger, autenticacao JWT e CRUDs principais. A segunda etapa adiciona a Orders API como aplicacao real de exemplo.
 
 ## Stack
 
@@ -17,7 +22,8 @@ API para registrar e consultar deploys de aplicacoes em multiplos ambientes. Est
 ```text
 DeployTrack-API/
 |-- src/
-|   `-- DevOpsBoard.Api/
+|   |-- DevOpsBoard.Api/
+|   `-- SampleOrders.Api/
 |-- infra/
 |   |-- aws/
 |   |   `-- task-definitions/
@@ -41,9 +47,14 @@ Observacao: o projeto .NET ainda usa o nome interno `DevOpsBoard.Api`, mas a API
 - Deployments: cadastrar, listar, consultar, editar, remover, consultar ultimo deploy e historico por aplicacao/ambiente
 - Health Checks: registrar status e consultar status atual
 
+## Aplicacao exemplo
+
+- Sample Orders API: criar pedidos, listar pedidos, consultar por id, atualizar status e health check.
+
 ## Documentacao do codigo
 
 - [Guia do codigo](docs/CODE_WALKTHROUGH.md): explica arquitetura, pastas, fluxo das requisicoes, autenticacao, banco, controllers e endpoints.
+- [Sample Orders API](docs/SAMPLE_ORDERS_API.md): explica a aplicacao exemplo, endpoints, models, DTOs, armazenamento em memoria e relacao com a DeployTrack.
 
 ## Como rodar com Docker
 
@@ -54,7 +65,8 @@ docker compose up --build
 A API sobe em:
 
 ```text
-http://localhost:8080
+DeployTrack API:    http://localhost:8080
+Sample Orders API: http://localhost:8081
 ```
 
 Swagger:
@@ -75,6 +87,12 @@ Depois rode a API:
 
 ```bash
 dotnet run --project src/DevOpsBoard.Api
+```
+
+Para rodar a Sample Orders API:
+
+```bash
+dotnet run --project src/SampleOrders.Api
 ```
 
 A connection string padrao esta em `src/DevOpsBoard.Api/appsettings.Development.json`.
