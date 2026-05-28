@@ -1,8 +1,8 @@
 services:
-  api:
+  deploytrack-api:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: deploytrack-api/Dockerfile
     ports:
       - "8080:8080"
     environment:
@@ -18,7 +18,7 @@ services:
   orders-api:
     build:
       context: .
-      dockerfile: src/SampleOrders.Api/Dockerfile
+      dockerfile: orders-api/Dockerfile
     ports:
       - "8081:8080"
     environment:

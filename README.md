@@ -6,6 +6,7 @@ Projeto de portfolio com duas aplicacoes:
 - `Sample Orders API`: aplicacao exemplo que controla pedidos ficticios e sera usada para simular deploys rastreados pela DeployTrack.
 
 A primeira etapa entrega a DeployTrack local com ASP.NET Core, Entity Framework Core, PostgreSQL via Docker, Swagger, autenticacao JWT e CRUDs principais. A segunda etapa adiciona a Orders API como aplicacao real de exemplo.
+A terceira etapa containeriza as duas APIs e valida tudo localmente com Docker Compose.
 
 ## Stack
 
@@ -24,6 +25,10 @@ DeployTrack-API/
 |-- src/
 |   |-- DevOpsBoard.Api/
 |   `-- SampleOrders.Api/
+|-- deploytrack-api/
+|   `-- Dockerfile
+|-- orders-api/
+|   `-- Dockerfile
 |-- infra/
 |   |-- aws/
 |   |   `-- task-definitions/
@@ -55,6 +60,7 @@ Observacao: o projeto .NET ainda usa o nome interno `DevOpsBoard.Api`, mas a API
 
 - [Guia do codigo](docs/CODE_WALKTHROUGH.md): explica arquitetura, pastas, fluxo das requisicoes, autenticacao, banco, controllers e endpoints.
 - [Sample Orders API](docs/SAMPLE_ORDERS_API.md): explica a aplicacao exemplo, endpoints, models, DTOs, armazenamento em memoria e relacao com a DeployTrack.
+- [Containerizacao local](docs/CONTAINERIZATION.md): explica os Dockerfiles, Docker Compose, portas, validacao local e relacao com AWS.
 
 ## Como rodar com Docker
 
