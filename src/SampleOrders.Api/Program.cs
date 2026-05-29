@@ -20,6 +20,13 @@ app.MapGet("/health", () => Results.Ok(new
 
 var orders = app.MapGroup("/orders");
 
+orders.MapGet("/health", () => Results.Ok(new
+{
+    status = "Healthy",
+    service = "Sample Orders API",
+    checkedAt = DateTimeOffset.UtcNow
+}));
+
 orders.MapPost("/", (CreateOrderRequest request, IOrderStore store) =>
 {
     var validationError = ValidateCreateOrder(request);

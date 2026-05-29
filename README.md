@@ -7,6 +7,7 @@ Projeto de portfolio com duas aplicacoes:
 
 A primeira etapa entrega a DeployTrack local com ASP.NET Core, Entity Framework Core, PostgreSQL via Docker, Swagger, autenticacao JWT e CRUDs principais. A segunda etapa adiciona a Orders API como aplicacao real de exemplo.
 A terceira etapa containeriza as duas APIs e valida tudo localmente com Docker Compose.
+A quarta etapa cria a infraestrutura AWS com Terraform. A quinta etapa cria pipelines CI/CD para publicar as duas APIs no ECS.
 
 ## Stack
 
@@ -29,10 +30,15 @@ DeployTrack-API/
 |   `-- Dockerfile
 |-- orders-api/
 |   `-- Dockerfile
-|-- infra/
-|   |-- aws/
-|   |   `-- task-definitions/
-|   `-- terraform/
+|-- terraform/
+|   |-- environments/
+|   |-- network/
+|   |-- ecr/
+|   |-- ecs/
+|   |-- alb/
+|   |-- rds/
+|   |-- secrets/
+|   `-- monitoring/
 |-- pipelines/
 |   `-- github-actions/
 |-- .github/
@@ -61,6 +67,8 @@ Observacao: o projeto .NET ainda usa o nome interno `DevOpsBoard.Api`, mas a API
 - [Guia do codigo](docs/CODE_WALKTHROUGH.md): explica arquitetura, pastas, fluxo das requisicoes, autenticacao, banco, controllers e endpoints.
 - [Sample Orders API](docs/SAMPLE_ORDERS_API.md): explica a aplicacao exemplo, endpoints, models, DTOs, armazenamento em memoria e relacao com a DeployTrack.
 - [Containerizacao local](docs/CONTAINERIZATION.md): explica os Dockerfiles, Docker Compose, portas, validacao local e relacao com AWS.
+- [Infraestrutura AWS](docs/AWS_TERRAFORM.md): explica VPC, ECR, ECS, ALB, RDS, Secrets Manager, CloudWatch e OIDC.
+- [CI/CD](docs/CICD.md): explica as pipelines de deploy da DeployTrack e da Orders API.
 
 ## Como rodar com Docker
 

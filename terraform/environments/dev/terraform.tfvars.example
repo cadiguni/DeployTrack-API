@@ -1,0 +1,8 @@
+github_repository = "your-github-user-or-org/DeployTrack-API"
+
+# Optional overrides:
+# aws_region       = "us-east-1"
+# rds_instance_class = "db.t4g.micro"
+# rds_backup_retention_period = 0
+# enable_nat_gateway = true
+# create_github_oidc_provider = false

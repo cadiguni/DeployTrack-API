@@ -14,7 +14,7 @@ builder.Services
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddDbContext<DevOpsBoardDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(GetDatabaseConnectionString(builder.Configuration)));
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -93,6 +93,32 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "Healthy",
+    service = "DeployTrack API",
+    checkedAt = DateTimeOffset.UtcNow
+}));
+
 app.MapControllers();
 
 app.Run();
+
+static string GetDatabaseConnectionString(IConfiguration configuration)
+{
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+    if (!string.IsNullOrWhiteSpace(connectionString))
+    {
+        return connectionString;
+    }
+
+    var databaseSection = configuration.GetSection("Database");
+    var host = databaseSection["Host"] ?? throw new InvalidOperationException("Database:Host is required.");
+    var name = databaseSection["Name"] ?? throw new InvalidOperationException("Database:Name is required.");
+    var username = databaseSection["Username"] ?? throw new InvalidOperationException("Database:Username is required.");
+    var password = databaseSection["Password"] ?? throw new InvalidOperationException("Database:Password is required.");
+    var port = databaseSection["Port"] ?? "5432";
+
+    return $"Host={host};Port={port};Database={name};Username={username};Password={password}";
+}

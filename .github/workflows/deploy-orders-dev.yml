@@ -1,0 +1,229 @@
+name: orders-api-deploy-dev
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/SampleOrders.Api/**"
+      - "orders-api/Dockerfile"
+      - ".github/workflows/deploy-orders-dev.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: deploytrack/orders-api
+  ECS_CLUSTER: deploytrack-dev-cluster
+  ECS_SERVICE: deploytrack-dev-orders-api
+  ECS_TASK_DEFINITION: deploytrack-dev-orders-api
+  CONTAINER_NAME: orders-api
+  ORDERS_HEALTH_URL: ${{ vars.ORDERS_HEALTH_URL }}
+  DEPLOYTRACK_API_BASE_URL: ${{ vars.DEPLOYTRACK_API_BASE_URL }}
+  DEPLOYTRACK_ENVIRONMENT: production
+  DEPLOYTRACK_APPLICATION_NAME: orders-api
+
+jobs:
+  deploy:
+    name: test-build-push-register-deploy
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore DevOpsBoard.sln
+
+      - name: Build
+        run: dotnet build DevOpsBoard.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test DevOpsBoard.sln --configuration Release --no-build --verbosity normal
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f orders-api/Dockerfile -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Login to DeployTrack
+        id: deploytrack-login
+        env:
+          DEPLOYTRACK_EMAIL: ${{ secrets.DEPLOYTRACK_EMAIL }}
+          DEPLOYTRACK_PASSWORD: ${{ secrets.DEPLOYTRACK_PASSWORD }}
+        run: |
+          test -n "$DEPLOYTRACK_API_BASE_URL"
+          token=$(curl --fail --silent \
+            --request POST "$DEPLOYTRACK_API_BASE_URL/api/auth/login" \
+            --header "Content-Type: application/json" \
+            --data "$(jq -n --arg email "$DEPLOYTRACK_EMAIL" --arg password "$DEPLOYTRACK_PASSWORD" '{ email: $email, password: $password }')" \
+            | jq -r '.token')
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure Orders application exists
+        continue-on-error: true
+        run: |
+          curl --silent --show-error \
+            --request POST "$DEPLOYTRACK_API_BASE_URL/api/applications" \
+            --header "Authorization: Bearer ${{ steps.deploytrack-login.outputs.token }}" \
+            --header "Content-Type: application/json" \
+            --data "$(jq -n \
+              --arg name "$DEPLOYTRACK_APPLICATION_NAME" \
+              --arg description "Sample Orders API" \
+              --arg repositoryUrl "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+              '{ name: $name, description: $description, repositoryUrl: $repositoryUrl }')"
+
+      - name: Register running deployment in DeployTrack
+        id: register-deployment
+        run: |
+          started_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          response=$(curl --fail --silent \
+            --request POST "$DEPLOYTRACK_API_BASE_URL/api/deployments" \
+            --header "Authorization: Bearer ${{ steps.deploytrack-login.outputs.token }}" \
+            --header "Content-Type: application/json" \
+            --data "$(jq -n \
+              --arg applicationName "$DEPLOYTRACK_APPLICATION_NAME" \
+              --arg environment "$DEPLOYTRACK_ENVIRONMENT" \
+              --arg version "$GITHUB_SHA" \
+              --arg status "Running" \
+              --arg deployedBy "github-actions" \
+              --arg commitSha "$GITHUB_SHA" \
+              --arg pipelineUrl "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+              --arg startedAt "$started_at" \
+              '{
+                applicationName: $applicationName,
+                environment: $environment,
+                version: $version,
+                status: $status,
+                deployedBy: $deployedBy,
+                commitSha: $commitSha,
+                pipelineUrl: $pipelineUrl,
+                startedAt: $startedAt,
+                finishedAt: null
+              }')")
+          echo "deployment_id=$(echo "$response" | jq -r '.id')" >> "$GITHUB_OUTPUT"
+          echo "started_at=$started_at" >> "$GITHUB_OUTPUT"
+
+      - name: Download current ECS task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "$ECS_TASK_DEFINITION" \
+            --query taskDefinition > task-definition.json
+
+      - name: Prepare ECS task definition
+        run: |
+          jq 'del(
+            .taskDefinitionArn,
+            .revision,
+            .status,
+            .requiresAttributes,
+            .compatibilities,
+            .registeredAt,
+            .registeredBy
+          )' task-definition.json > task-definition-clean.json
+
+      - name: Render ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition-clean.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Validate health check
+        run: |
+          test -n "$ORDERS_HEALTH_URL"
+          curl --fail --retry 10 --retry-delay 10 --retry-all-errors "$ORDERS_HEALTH_URL"
+
+      - name: Mark deployment as success
+        if: success()
+        run: |
+          finished_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          curl --fail --silent \
+            --request PUT "$DEPLOYTRACK_API_BASE_URL/api/deployments/${{ steps.register-deployment.outputs.deployment_id }}" \
+            --header "Authorization: Bearer ${{ steps.deploytrack-login.outputs.token }}" \
+            --header "Content-Type: application/json" \
+            --data "$(jq -n \
+              --arg applicationName "$DEPLOYTRACK_APPLICATION_NAME" \
+              --arg environment "$DEPLOYTRACK_ENVIRONMENT" \
+              --arg version "$GITHUB_SHA" \
+              --arg status "Success" \
+              --arg deployedBy "github-actions" \
+              --arg commitSha "$GITHUB_SHA" \
+              --arg pipelineUrl "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+              --arg startedAt "${{ steps.register-deployment.outputs.started_at }}" \
+              --arg finishedAt "$finished_at" \
+              '{
+                applicationName: $applicationName,
+                environment: $environment,
+                version: $version,
+                status: $status,
+                deployedBy: $deployedBy,
+                commitSha: $commitSha,
+                pipelineUrl: $pipelineUrl,
+                startedAt: $startedAt,
+                finishedAt: $finishedAt
+              }')"
+
+      - name: Mark deployment as failed
+        if: failure() && steps.register-deployment.outputs.deployment_id != ''
+        run: |
+          finished_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          curl --silent --show-error \
+            --request PUT "$DEPLOYTRACK_API_BASE_URL/api/deployments/${{ steps.register-deployment.outputs.deployment_id }}" \
+            --header "Authorization: Bearer ${{ steps.deploytrack-login.outputs.token }}" \
+            --header "Content-Type: application/json" \
+            --data "$(jq -n \
+              --arg applicationName "$DEPLOYTRACK_APPLICATION_NAME" \
+              --arg environment "$DEPLOYTRACK_ENVIRONMENT" \
+              --arg version "$GITHUB_SHA" \
+              --arg status "Failed" \
+              --arg deployedBy "github-actions" \
+              --arg commitSha "$GITHUB_SHA" \
+              --arg pipelineUrl "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+              --arg startedAt "${{ steps.register-deployment.outputs.started_at }}" \
+              --arg finishedAt "$finished_at" \
+              '{
+                applicationName: $applicationName,
+                environment: $environment,
+                version: $version,
+                status: $status,
+                deployedBy: $deployedBy,
+                commitSha: $commitSha,
+                pipelineUrl: $pipelineUrl,
+                startedAt: $startedAt,
+                finishedAt: $finishedAt
+              }')"

@@ -41,6 +41,7 @@ A API controla pedidos em memoria e expoe estes endpoints:
 - `GET /orders/{id}`
 - `PATCH /orders/{id}/status`
 - `GET /health`
+- `GET /orders/health`
 
 Os dados ficam em memoria. Isso significa que, ao reiniciar a aplicacao, os pedidos criados localmente sao perdidos. Para esta etapa isso e intencional: a API existe para simular uma aplicacao real no ciclo de deploy, nao para demonstrar persistencia.
 
@@ -208,6 +209,10 @@ Resposta esperada:
   "checkedAt": "2026-05-26T18:00:00Z"
 }
 ```
+
+### GET /orders/health
+
+Tambem verifica se a API esta respondendo, mas usando um caminho que pode ser roteado pelo ALB compartilhado com a DeployTrack.
 
 ### POST /orders
 

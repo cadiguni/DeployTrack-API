@@ -168,6 +168,12 @@ Health:
 GET http://localhost:8081/health
 ```
 
+Health usando o mesmo prefixo que sera roteado pelo ALB na AWS:
+
+```http
+GET http://localhost:8081/orders/health
+```
+
 Criar pedido:
 
 ```http
